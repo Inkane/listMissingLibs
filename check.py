@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
 import re
+from collections import defaultdict
+
 from elftools.elf.elffile import ELFFile
 from elftools.elf.dynamic import DynamicSection, DynamicSegment
 from elftools.common.exceptions import ELFError
@@ -9,8 +11,8 @@ from elftools.common.py3compat import bytes2str
 class BrokenFinder():
 
     def __init__(self):
-        self.needed = set() # shared libraries which are needed by others or by programs
         self.found = set()  # 'shared libraries' (could also be symlinks) that we found so far
+        self.lib2required_by = defaultdict(list)
 
     def enumerate_shared_libs(self):
         somatching = re.compile(r""".*\.so\Z # normal shared object
@@ -21,7 +23,7 @@ class BrokenFinder():
                 if not os.path.islink(fullname):
                     yield fullname
 
-    def list_needed(self, sofile):
+    def collect_needed(self, sofile):
         with open(sofile, 'rb') as f:
             try:
                 elffile = ELFFile(f)
@@ -31,16 +33,20 @@ class BrokenFinder():
 
                     for tag in section.iter_tags():
                         if tag.entry.d_tag == 'DT_NEEDED':
-                            yield bytes2str(tag.needed)
-                raise StopIteration
+                            self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+
             except ELFError:
-                raise StopIteration  # not an ELF file
+                pass  # not an ELF file
 
 
     def check(self):
         for solib in self.enumerate_shared_libs():
-            self.needed.update(set(self.list_needed(solib)))
-        print(self.needed  - self.found)
+            self.collect_needed(solib)
+        missing_libs = self.lib2required_by.keys()  - self.found
+        if missing_libs:
+            print("==The following libraries were not found")
+        for missing_lib in (missing_libs):
+            print("{} required by: {}".format(missing_lib, ', '.join(self.lib2required_by[missing_lib])))
 
 b = BrokenFinder()
 b.check()
