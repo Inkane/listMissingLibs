@@ -1,13 +1,29 @@
 #!/usr/bin/env python3
 import os
+import sys
 import re
 import itertools as itools
 from collections import defaultdict
+
+try:
+    from termcolor import colored
+except ImportError:
+    print("termcolor is not installed; output will be lacking colours" ,file=sys.stderr)
+    def colored(*args, **kwargs):
+        return args[0]
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.dynamic import DynamicSection, DynamicSegment
 from elftools.common.exceptions import ELFError
 from elftools.common.py3compat import bytes2str
+
+def warn(text):
+    warning = colored("Warning: >>", 'red')
+    text = colored(text, 'white')
+    print(warning, text, file=sys.stderr)
+
+def highlight(text):
+    return colored(text, 'white', attrs=['bold', 'dark'])
 
 class BrokenFinder():
 
@@ -49,16 +65,16 @@ class BrokenFinder():
                 except ELFError:
                     pass  # not an ELF file
         except PermissionError:
-            print("Could not open {}; please check permissions".format(sofile))
+            warn("Could not open {}; please check permissions".format(sofile))
 
     def check(self):
         for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
             self.collect_needed(lib_or_bin)
         missing_libs = self.lib2required_by.keys()  - self.found
         if missing_libs:
-            print("==The following libraries were not found")
+            warn("The following libraries were not found")
         for missing_lib in (missing_libs):
-            print("{} required by: {}".format(missing_lib, ', '.join(self.lib2required_by[missing_lib])))
+            print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
 
 b = BrokenFinder()
 b.check()
