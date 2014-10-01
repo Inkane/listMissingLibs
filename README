@@ -1,0 +1,7 @@
+Usage:
+ * simply run python3 list_missing_libs.py
+ * the script might require root privileges to access some of the files
+
+Dependencies:
+ * elftools from https://github.com/eliben/pyelftools
+ * termcolor (soft dependency, required if you want coloured output)
