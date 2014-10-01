@@ -17,6 +17,7 @@ from elftools.elf.dynamic import DynamicSection, DynamicSegment
 from elftools.common.exceptions import ELFError
 from elftools.common.py3compat import bytes2str
 
+# utilities
 def warn(text):
     warning = colored("Warning: >>", 'red')
     text = colored(text, 'white')
@@ -25,6 +26,10 @@ def warn(text):
 def highlight(text):
     return colored(text, 'white', attrs=['bold', 'dark'])
 
+
+def walk_multi_dir(dirs):
+    yield from itools.chain(*(os.walk(d) for d in dirs))
+
 class BrokenFinder():
 
     def __init__(self):
@@ -32,18 +37,21 @@ class BrokenFinder():
         self.lib2required_by = defaultdict(list)
         # get all directories in PATH;  if unset, use "/usr/bin" as a default
         self.bindirs = os.environ.get("PATH", "/usr/bin").split(":")
+        self.libdirs = ["/usr", "/lib", "/lib64"]
+        if os.path.exists("/opt"):
+            self.libdirs.append("/opt")
 
     def enumerate_shared_libs(self):
         somatching = re.compile(r""".*\.so\Z # normal shared object
         |.*\.so(\.\d+)+ # versioned shared object""", re.VERBOSE)
-        for dpath, dnames, fnames in os.walk("/usr"):
+        for dpath, dnames, fnames in walk_multi_dir(self.libdirs):
             for fullname, fname in ((os.path.join(dpath, fname),fname) for fname in fnames if re.match(somatching ,fname)):
                 self.found.add(fname)
                 if not os.path.islink(fullname):
                     yield fullname
 
     def enumerate_binaries(self):
-        for dpath, dnames, fnames in itools.chain(*(os.walk(bindir) for bindir in self.bindirs)):
+        for dpath, dnames, fnames in walk_multi_dir(self.bindirs):
             for fname in fnames:
                 fullname = os.path.join(dpath, fname)
                 if not os.path.islink(fullname):
