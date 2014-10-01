@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import re
+import itertools as itools
 from collections import defaultdict
 
 from elftools.elf.elffile import ELFFile
@@ -13,6 +14,8 @@ class BrokenFinder():
     def __init__(self):
         self.found = set()  # 'shared libraries' (could also be symlinks) that we found so far
         self.lib2required_by = defaultdict(list)
+        # get all directories in PATH;  if unset, use "/usr/bin" as a default
+        self.bindirs = os.environ.get("PATH", "/usr/bin").split(":")
 
     def enumerate_shared_libs(self):
         somatching = re.compile(r""".*\.so\Z # normal shared object
@@ -23,25 +26,34 @@ class BrokenFinder():
                 if not os.path.islink(fullname):
                     yield fullname
 
+    def enumerate_binaries(self):
+        for dpath, dnames, fnames in itools.chain(*(os.walk(bindir) for bindir in self.bindirs)):
+            for fname in fnames:
+                fullname = os.path.join(dpath, fname)
+                if not os.path.islink(fullname):
+                    yield fullname
+
     def collect_needed(self, sofile):
-        with open(sofile, 'rb') as f:
-            try:
-                elffile = ELFFile(f)
-                for section in elffile.iter_sections():
-                    if not isinstance(section, DynamicSection):
-                        continue
+        try:
+            with open(sofile, 'rb') as f:
+                try:
+                    elffile = ELFFile(f)
+                    for section in elffile.iter_sections():
+                        if not isinstance(section, DynamicSection):
+                            continue
 
-                    for tag in section.iter_tags():
-                        if tag.entry.d_tag == 'DT_NEEDED':
-                            self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                        for tag in section.iter_tags():
+                            if tag.entry.d_tag == 'DT_NEEDED':
+                                self.lib2required_by[bytes2str(tag.needed)].append(sofile)
 
-            except ELFError:
-                pass  # not an ELF file
-
+                except ELFError:
+                    pass  # not an ELF file
+        except PermissionError:
+            print("Could not open {}; please check permissions".format(sofile))
 
     def check(self):
-        for solib in self.enumerate_shared_libs():
-            self.collect_needed(solib)
+        for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
+            self.collect_needed(lib_or_bin)
         missing_libs = self.lib2required_by.keys()  - self.found
         if missing_libs:
             print("==The following libraries were not found")
