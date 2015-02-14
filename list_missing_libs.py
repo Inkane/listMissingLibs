@@ -40,7 +40,6 @@ class BrokenFinder():
         # get all directories in PATH;  if unset, use "/usr/bin" as a default
         self.bindirs = os.environ.get("PATH", "/usr/bin").split(":")
         self.libdirs = ["/usr"]
-        self.mutex = Lock()
         self.job_queue = Queue()
         if os.path.exists("/opt"):
             self.libdirs.append("/opt")
@@ -72,8 +71,10 @@ class BrokenFinder():
 
                         for tag in section.iter_tags():
                             if tag.entry.d_tag == 'DT_NEEDED':
-                                with self.mutex:
-                                    self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                                # no race, as there is only one worker
+                                # and check waits for the worker to finish
+                                # before accessing lib2required
+                                self.lib2required_by[bytes2str(tag.needed)].append(sofile)
 
                 except ELFError:
                     pass  # not an ELF file
@@ -87,10 +88,9 @@ class BrokenFinder():
             self.job_queue.task_done()
 
     def check(self):
-        for i in range(2):
-            t = Thread(target=self.worker)
-            t.daemon = True
-            t.start()
+        t = Thread(target=self.worker)
+        t.daemon = True
+        t.start()
         for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
             self.job_queue.put(lib_or_bin)
         self.job_queue.join()
