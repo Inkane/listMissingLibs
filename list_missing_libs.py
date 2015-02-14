@@ -4,6 +4,8 @@ import sys
 import re
 import itertools as itools
 from collections import defaultdict
+from threading import Lock, Thread
+from queue import Queue
 
 try:
     from termcolor import colored
@@ -38,6 +40,8 @@ class BrokenFinder():
         # get all directories in PATH;  if unset, use "/usr/bin" as a default
         self.bindirs = os.environ.get("PATH", "/usr/bin").split(":")
         self.libdirs = ["/usr"]
+        self.mutex = Lock()
+        self.job_queue = Queue()
         if os.path.exists("/opt"):
             self.libdirs.append("/opt")
 
@@ -68,21 +72,34 @@ class BrokenFinder():
 
                         for tag in section.iter_tags():
                             if tag.entry.d_tag == 'DT_NEEDED':
-                                self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                                with self.mutex:
+                                    self.lib2required_by[bytes2str(tag.needed)].append(sofile)
 
                 except ELFError:
                     pass  # not an ELF file
         except PermissionError:
             warn("Could not open {}; please check permissions".format(sofile))
 
+    def worker(self):
+        while True:
+            item = self.job_queue.get()
+            self.collect_needed(item)
+            self.job_queue.task_done()
+
     def check(self):
+        for i in range(2):
+            t = Thread(target=self.worker)
+            t.daemon = True
+            t.start()
         for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
-            self.collect_needed(lib_or_bin)
+            self.job_queue.put(lib_or_bin)
+        self.job_queue.join()
         missing_libs = self.lib2required_by.keys()  - self.found
         if missing_libs:
             warn("The following libraries were not found")
         for missing_lib in (missing_libs):
             print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
 
-b = BrokenFinder()
-b.check()
+if __name__ == "__main__":
+    b = BrokenFinder()
+    b.check()
