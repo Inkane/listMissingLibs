@@ -37,7 +37,7 @@ class BrokenFinder():
         self.lib2required_by = defaultdict(list)
         # get all directories in PATH;  if unset, use "/usr/bin" as a default
         self.bindirs = os.environ.get("PATH", "/usr/bin").split(":")
-        self.libdirs = ["/usr", "/lib", "/lib64"]
+        self.libdirs = ["/usr"]
         if os.path.exists("/opt"):
             self.libdirs.append("/opt")
 
