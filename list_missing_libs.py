@@ -4,6 +4,7 @@ import sys
 import re
 import itertools as itools
 from collections import defaultdict
+import subprocess
 
 try:
     from termcolor import colored
@@ -81,8 +82,14 @@ class BrokenFinder():
         missing_libs = self.lib2required_by.keys()  - self.found
         if missing_libs:
             warn("The following libraries were not found")
+        broken_pkgs = set()
         for missing_lib in (missing_libs):
             print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
+            for file in self.lib2required_by[missing_lib]:
+                pkg = subprocess.check_output(["pacman", "-Qqo", file])
+                broken_pkgs.add(pkg.decode("utf-8"))
+        for pkg in broken_pkgs:
+            print(pkg.strip())
 
 b = BrokenFinder()
 b.check()
