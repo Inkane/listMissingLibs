@@ -4,6 +4,7 @@ import sys
 import re
 import itertools as itools
 from collections import defaultdict
+import subprocess
 
 try:
     from termcolor import colored
@@ -84,5 +85,21 @@ class BrokenFinder():
         for missing_lib in (missing_libs):
             print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
 
-b = BrokenFinder()
-b.check()
+        if not missing_libs:
+            return
+        print("Querying the owner of broken files")
+        print("==================================")
+        # collect all broken packages
+        broken_package = defaultdict(set)
+        for missing_lib in missing_libs:
+            demanders = self.lib2required_by[missing_lib]
+            out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
+            for pkg in out.strip().decode("utf-8").split():
+                broken_package[pkg].add(missing_lib)
+        print("\n\nSumarry:")
+        for key, value in broken_package.items():
+            print(highlight(key), " misses:\t", " ".join(value))
+
+if __name__ == "__main__":
+    b = BrokenFinder()
+    b.check()
