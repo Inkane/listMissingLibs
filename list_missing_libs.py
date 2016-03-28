@@ -80,32 +80,24 @@ class BrokenFinder():
         for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
             self.collect_needed(lib_or_bin)
         missing_libs = self.lib2required_by.keys()  - self.found
-        if missing_libs:
-            warn("The following libraries were not found")
-        broken_pkgs = set()
-        for missing_lib in (missing_libs):
-            print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
-            for file in self.lib2required_by[missing_lib]:
-                pkg = subprocess.check_output(["pacman", "-Qqo", file])
-                broken_pkgs.add(pkg.decode("utf-8"))
-        for pkg in broken_pkgs:
-            print(pkg.strip())
-
-        if not missing_libs:
-            return
-        print("Querying the owner of broken files")
-        print("==================================")
-        # collect all broken packages
         broken_package = defaultdict(set)
         for missing_lib in missing_libs:
             demanders = self.lib2required_by[missing_lib]
             out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
             for pkg in out.strip().decode("utf-8").split():
                 broken_package[pkg].add(missing_lib)
+
+        return missing_libs, broken_package
+
+    def report(self):
+        # print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
+
+        missing_libs, broken_pkgs = self.check()
+        # collect all broken packages
         print("\n\nSumarry:")
         for key, value in broken_package.items():
             print(highlight(key), " misses:\t", " ".join(value))
 
 if __name__ == "__main__":
     b = BrokenFinder()
-    b.check()
+    b.report()
