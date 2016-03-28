@@ -9,7 +9,7 @@ import subprocess
 try:
     from termcolor import colored
 except ImportError:
-    print("termcolor is not installed; output will be lacking colours" ,file=sys.stderr)
+    print("termcolor is not installed; output will be lacking colours", file=sys.stderr)
     def colored(*args, **kwargs):
         return args[0]
 
@@ -86,16 +86,11 @@ class BrokenFinder():
             out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
             for pkg in out.strip().decode("utf-8").split():
                 broken_package[pkg].add(missing_lib)
-
         return missing_libs, broken_package
 
     def report(self):
-        # print("{} required by: {}".format(highlight(missing_lib), ', '.join(self.lib2required_by[missing_lib])), file=sys.stderr)
-
-        missing_libs, broken_pkgs = self.check()
-        # collect all broken packages
-        print("\n\nSumarry:")
-        for key, value in broken_package.items():
+        missing_libs, broken_packages = self.check()
+        for key, value in broken_packages.items():
             print(highlight(key), " misses:\t", " ".join(value))
 
 if __name__ == "__main__":
