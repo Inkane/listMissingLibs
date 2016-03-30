@@ -30,6 +30,13 @@ except ImportError:
     print("termcolor is not installed; output will be lacking colours", file=sys.stderr)
     def colored(*args, **kwargs):
         return args[0]
+    
+try:
+    from tqdm import tqdm
+except ImportError:
+    print("tqdm is not installed. Progress bars are disabled")
+    def tqdm(iterable):
+        return iterable
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.dynamic import DynamicSection, DynamicSegment
@@ -145,11 +152,13 @@ class BrokenFinder():
             warn("Could not open {}; please check permissions".format(sofile))
 
     def check(self):
-        for lib_or_bin in itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()):
+        print("Checking libraries and binaries")
+        for lib_or_bin in tqdm(list(itools.chain(self.enumerate_shared_libs(), self.enumerate_binaries()))):
             self.collect_needed(lib_or_bin)
         missing_libs = self.lib2required_by.keys()  - self.found
         broken_package = defaultdict(set)
-        for missing_lib in missing_libs:
+        print("Determining broken packages")
+        for missing_lib in tqdm(missing_libs):
             demanders = self.lib2required_by[missing_lib]
             try:
                 out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
@@ -177,7 +186,13 @@ if __name__ == "__main__":
                         help="Path were report should be stored. Default: current dir",
                         default=os.getcwd()
                         )
+    parser.add_argument("--gui-only", "-g",
+                        action="store_true",
+                        help="only show gui output")
     args = parser.parse_args()
+    if args.gui_only and args.cli_only:
+        print("Only means that there is only one. Defaulting to cli")
+        args.cli_only = True
     cliviewer = shutil.which("elinks")
     cliviewer = cliviewer or shutil.which("html2text")
     if args.cli_only and not cliviewer:
@@ -190,7 +205,7 @@ if __name__ == "__main__":
     out_path = os.path.join(args.out, out_name)
     with open(out_path, "w") as f:
         f.write(htmlreport)
-    if cliviewer:
+    if cliviewer and not args.gui_only:
         if "elinks" in cliviewer:
             subprocess.check_call([cliviewer, "--dump", out_path])
         else:
