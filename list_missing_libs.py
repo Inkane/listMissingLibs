@@ -6,6 +6,9 @@ import itertools as itools
 from collections import defaultdict
 import subprocess
 import webbrowser
+import shutil
+import argparse
+from pathlib import Path
 
 from jinja2 import Environment
 
@@ -20,6 +23,10 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.dynamic import DynamicSection, DynamicSegment
 from elftools.common.exceptions import ELFError
 from elftools.common.py3compat import bytes2str
+
+
+#TEMPLATE_PATH = "/usr/share/chakra/templates"
+TEMPLATE_PATH = "./"
 
 # utilities
 def warn(text):
@@ -93,14 +100,39 @@ class BrokenFinder():
 
     def report(self):
         missing_libs, broken_packages = self.check()
-        with open("./template.html") as f:
+        with open(os.path.join(TEMPLATE_PATH, "template.html")) as f:
             template = Environment().from_string(f.read())
         html = template.render(broken_packages=broken_packages)
-        with open("./out.html", "w") as f:
-            f.write(html)
-        webbrowser.open("./out.html")
+        return html
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cli-only", "-c",
+                        action="store_true",
+                        help="Do not display report in browser"
+                        )
+    parser.add_argument("--out", "-o",
+                        help="Path were report should be stored. Default: current dir",
+                        default=os.getcwd()
+                        )
+    args = parser.parse_args()
+    cliviewer = shutil.which("elinks")
+    cliviewer = cliviewer or shutil.which("html2text")
+    if args.cli_only and not cliviewer:
+        warn("To show the output in your terminal, please install either elinks or html2text")
+        warn("Exiting now")
+        sys.exit(1)
     b = BrokenFinder()
-    b.report()
+    htmlreport = b.report()
+    out_name = "out.html"
+    out_path = os.path.join(args.out, out_name)
+    with open(out_path, "w") as f:
+        f.write(htmlreport)
+    if cliviewer:
+        if "elinks" in cliviewer:
+            subprocess.check_call([cliviewer, "--dump", out_path])
+        else:
+            subprocess.check_call([cliviewer, out_path])
+    if not args.cli_only:
+        webbrowser.open(out_path)
