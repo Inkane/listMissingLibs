@@ -25,8 +25,42 @@ from elftools.common.exceptions import ELFError
 from elftools.common.py3compat import bytes2str
 
 
-#TEMPLATE_PATH = "/usr/share/chakra/templates"
-TEMPLATE_PATH = "./"
+TEMPLATE = """
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.0/foundation-flex.min.css" rel="stylesheet">
+    <title>Broken package report</title>
+  </head>
+  <body>
+    <div id="packagelist" class="row">
+      <h1>Broken package report</h1>
+      <table id="pkgtable" class="hover" border="1">
+        <thead>
+          <tr>
+            <th>Broken package</th>
+            <th>Broken file</th>
+            <th>Missing .so files</th>
+          </tr>
+         </thead>
+         <tbody>
+           {% for broken_package, missing_so_files in broken_packages.items() %}
+           {% for missing_so, broken_file in missing_so_files %}
+           <tr>
+             {% if loop.first %}
+             <td rowspan="{{loop.length}}" >{{broken_package}}</td>
+             {% endif %}
+             <td>{{broken_file}}</td>
+             <td>{{missing_so}}</td>
+           </tr>
+           {% endfor %}
+           {% endfor %}
+         </tbody>
+      </table>
+    </div>
+  </body>
+</html>
+"""
 
 # utilities
 def warn(text):
@@ -100,8 +134,7 @@ class BrokenFinder():
 
     def report(self):
         missing_libs, broken_packages = self.check()
-        with open(os.path.join(TEMPLATE_PATH, "template.html")) as f:
-            template = Environment().from_string(f.read())
+        template = Environment().from_string(TEMPLATE)
         html = template.render(broken_packages=broken_packages)
         return html
 
