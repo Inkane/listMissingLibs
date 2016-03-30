@@ -3,13 +3,11 @@ import os
 import sys
 import re
 import itertools as itools
+import argparse
 from collections import defaultdict
 import subprocess
 import webbrowser
 import shutil
-import argparse
-from pathlib import Path
-
 from jinja2 import Environment
 
 try:
