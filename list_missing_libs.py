@@ -6,6 +6,8 @@ import itertools as itools
 from collections import defaultdict
 import subprocess
 
+from jinja2 import Environment
+
 try:
     from termcolor import colored
 except ImportError:
@@ -90,8 +92,12 @@ class BrokenFinder():
 
     def report(self):
         missing_libs, broken_packages = self.check()
-        for key, value in broken_packages.items():
-            print(highlight(key), " misses:\t", " ".join(value))
+        with open("./template.html") as f:
+            template = Environment().from_string(f.read())
+        html = template.render(broken_packages=broken_packages)
+        with open("./out.html", "w") as f:
+            f.write(html)
+
 
 if __name__ == "__main__":
     b = BrokenFinder()

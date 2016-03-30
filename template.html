@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.2.0/foundation-flex.min.css" rel="stylesheet">
+    <title>Broken package report</title>
+  </head>
+  <body>
+    <div id="packagelist" class="row">
+      <h1>Broken package report</h1>
+      <table class="hover">
+        <thead> 
+          <tr>
+            <th>Broken package</th>
+            <th>Missing .so files</th>
+          </tr>
+         </thead>
+         <tbody>
+           {% for broken_package, missing_so_files in broken_packages.items() %}
+           <tr>
+             <td>{{broken_package}}</td>
+             <td> 
+               <ul class="no-bullet">
+                 {% for missing_so in missing_so_files %}
+                 <li>{{ missing_so }}</li>
+                 {% endfor %}
+               </ul>
+             </td>
+           </tr>
+           {% endfor %}
+         </tbody>
+      </table>
+    </div>
+  </body>
+</html>
