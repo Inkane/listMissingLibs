@@ -105,9 +105,21 @@ class BrokenFinder():
             with open(sofile, 'rb') as f:
                 try:
                     elffile = ELFFile(f)
-                    for section in elffile.iter_sections():
-                        if not isinstance(section, DynamicSection):
+
+                    # we try to avoid superfluous work by not calling
+                    # elffile.itersections() directly
+                    # Instead we use the lower level API and continue
+                    # if the section type is not SHT_DYNAMIC
+                    # We can thus avoid to construct Section objects
+                    for i in range(elffile.num_sections()):
+                        section_header = elffile._get_section_header(i)
+                        sectype = section_header['sh_type']
+                        if sectype != 'SHT_DYNAMIC':
                             continue
+                        name = elffile._get_section_name(section_header)
+                        section = DynamicSection(section_header, name,
+                                                 elffile.stream,
+                                                 elffile)
 
                         for tag in section.iter_tags('DT_NEEDED'):
                             self.lib2required_by[bytes2str(tag.needed)].append(sofile)
