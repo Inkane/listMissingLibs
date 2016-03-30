@@ -5,6 +5,7 @@ import re
 import itertools as itools
 from collections import defaultdict
 import subprocess
+import webbrowser
 
 from jinja2 import Environment
 
@@ -97,6 +98,7 @@ class BrokenFinder():
         html = template.render(broken_packages=broken_packages)
         with open("./out.html", "w") as f:
             f.write(html)
+        webbrowser.open("./out.html")
 
 
 if __name__ == "__main__":
