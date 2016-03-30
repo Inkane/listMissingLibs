@@ -8,9 +8,21 @@ from collections import defaultdict
 import subprocess
 import webbrowser
 import shutil
+import functools
 from jinja2 import Environment
 
 import elftools.elf.structs
+
+from elftools.elf.structs import ELFStructs
+
+@functools.lru_cache(maxsize=8) # 4 __should__ be sufficiant, but 8 cannot hurt
+class CachingELFStructs(ELFStructs):
+    def __init__(self, little_endian=True, elfclass=32):
+        super().__init__(little_endian, elfclass)
+
+elftools.elf.structs.ELFStructs = CachingELFStructs
+
+
 
 try:
     from termcolor import colored
