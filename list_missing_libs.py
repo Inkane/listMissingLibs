@@ -183,8 +183,8 @@ if __name__ == "__main__":
                         help="Do not display report in browser"
                         )
     parser.add_argument("--out", "-o",
-                        help="Path were report should be stored. Default: current dir",
-                        default=os.getcwd()
+                        help="Path were report should be stored. Default: /tmp",
+                        default="/tmp"
                         )
     parser.add_argument("--gui-only", "-g",
                         action="store_true",
