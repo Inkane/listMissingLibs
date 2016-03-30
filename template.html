@@ -7,25 +7,25 @@
   <body>
     <div id="packagelist" class="row">
       <h1>Broken package report</h1>
-      <table class="hover">
+      <table id="pkgtable" class="hover" border="1">
         <thead> 
           <tr>
             <th>Broken package</th>
+            <th>Broken file</th>
             <th>Missing .so files</th>
           </tr>
          </thead>
          <tbody>
            {% for broken_package, missing_so_files in broken_packages.items() %}
+           {% for missing_so, broken_file in missing_so_files %}
            <tr>
-             <td>{{broken_package}}</td>
-             <td> 
-               <ul class="no-bullet">
-                 {% for missing_so in missing_so_files %}
-                 <li>{{ missing_so }}</li>
-                 {% endfor %}
-               </ul>
-             </td>
+             {% if loop.first %}
+             <td rowspan="{{loop.length}}" >{{broken_package}}</td>
+             {% endif %}
+             <td>{{broken_file}}</td>
+             <td>{{missing_so}}</td>
            </tr>
+           {% endfor %}
            {% endfor %}
          </tbody>
       </table>

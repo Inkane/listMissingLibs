@@ -86,8 +86,8 @@ class BrokenFinder():
         for missing_lib in missing_libs:
             demanders = self.lib2required_by[missing_lib]
             out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
-            for pkg in out.strip().decode("utf-8").split():
-                broken_package[pkg].add(missing_lib)
+            for index, pkg in enumerate(out.strip().decode("utf-8").split()):
+                broken_package[pkg].add((missing_lib, demanders[index]))
         return missing_libs, broken_package
 
     def report(self):
