@@ -111,9 +111,9 @@ class BrokenFinder():
                         if not isinstance(section, DynamicSection):
                             continue
 
-                        for tag in section.iter_tags():
-                            if tag.entry.d_tag == 'DT_NEEDED':
-                                self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                        for tag in section.iter_tags('DT_NEEDED'):
+                            self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                        break # there should only be one dyanmic section
 
                 except ELFError:
                     pass  # not an ELF file
