@@ -63,7 +63,7 @@ TEMPLATE = """
           </tr>
          </thead>
          <tbody>
-           {% for broken_package, missing_so_files in broken_packages.items() %}
+           {% for broken_package, missing_so_files in broken_packages.items() | sort %}
            {% for missing_so, broken_file in missing_so_files %}
            <tr>
              {% if loop.first %}
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.gui_only and args.cli_only:
         print("Only means that there is only one. Defaulting to cli")
-        args.cli_only = True
+        args.gui_only = False
     cliviewer = shutil.which("elinks")
     cliviewer = cliviewer or shutil.which("html2text")
     if args.cli_only and not cliviewer:
