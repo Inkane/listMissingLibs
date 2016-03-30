@@ -10,6 +10,9 @@ import webbrowser
 import shutil
 from jinja2 import Environment
 
+import elftools.elf.structs
+elftools.elf.structs.ELFStructs = CachingELFStructs
+
 try:
     from termcolor import colored
 except ImportError:
@@ -137,7 +140,11 @@ class BrokenFinder():
         broken_package = defaultdict(set)
         for missing_lib in missing_libs:
             demanders = self.lib2required_by[missing_lib]
-            out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
+            try:
+                out = subprocess.check_output(["pacman", "-Qoq"] + demanders)
+            except subprocess.CalledProcessError:
+                warn("Could not get owner for %s" % ", ".join(demanders))
+                out = b""
             for index, pkg in enumerate(out.strip().decode("utf-8").split()):
                 broken_package[pkg].add((missing_lib, demanders[index]))
         return missing_libs, broken_package
