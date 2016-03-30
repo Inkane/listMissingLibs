@@ -11,7 +11,6 @@ import shutil
 from jinja2 import Environment
 
 import elftools.elf.structs
-elftools.elf.structs.ELFStructs = CachingELFStructs
 
 try:
     from termcolor import colored
