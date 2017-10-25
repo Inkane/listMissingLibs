@@ -143,7 +143,7 @@ class BrokenFinder():
                                                  elffile)
 
                         for tag in section.iter_tags('DT_NEEDED'):
-                            self.lib2required_by[bytes2str(tag.needed)].append(sofile)
+                            self.lib2required_by[tag.needed].append(sofile)
                         break # there should only be one dyanmic section
 
                 except ELFError:
